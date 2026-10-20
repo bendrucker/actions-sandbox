@@ -1,7 +1,7 @@
 #!/bin/sh
 # One-job spike: register a just-in-time runner on this repo, start it under
-# srt, dispatch spike.yml, and print the run's log. Everything goes to the log
-# file as well as the terminal.
+# srt, dispatch spike.yml, and print the run's log. All output goes to the log
+# file only, so the terminal stays quiet until it exits.
 set -eu
 
 REPO=bendrucker/actions-sandbox
