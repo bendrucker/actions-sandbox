@@ -1,0 +1,24 @@
+name: spike
+
+on: workflow_dispatch
+
+jobs:
+  probe:
+    runs-on: [self-hosted, actions-sandbox]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Allowed
+        run: |
+          set -x
+          whoami
+          pwd
+          echo ok > "$RUNNER_TEMP/write-probe" && cat "$RUNNER_TEMP/write-probe"
+          curl -sS -m 10 -o /dev/null -w '%{http_code}\n' https://api.github.com
+      - name: Denied
+        run: |
+          set -x
+          ls ~ || echo "read home: denied"
+          head -c 1 ~/.ssh/config || echo "read ~/.ssh: denied"
+          touch ~/actions-sandbox-probe || echo "write home: denied"
+          curl -sS -m 10 -o /dev/null https://example.com || echo "egress example.com: denied"
