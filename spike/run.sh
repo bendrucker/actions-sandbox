@@ -6,15 +6,17 @@ set -eu
 
 REPO=bendrucker/actions-sandbox
 SRT=@anthropic-ai/sandbox-runtime@0.0.81
-DIR=$HOME/tmp/actions-sandbox-spike
 LOG=$HOME/tmp/actions-sandbox-spike.log
 here=$(cd "$(dirname "$0")" && pwd)
 
-rm -rf "$DIR" && mkdir -p "$DIR/runner"
+# The runner exits unless it can list every ancestor of its root, and the
+# policy denies reads under ~, so the work dir lives outside it.
+DIR=$(cd "$(mktemp -d "${TMPDIR:-/tmp}/actions-sandbox-spike.XXXXXX")" && pwd -P)
+mkdir -p "$DIR/runner" "$(dirname "$LOG")"
 exec > "$LOG" 2>&1
 
 version=$(gh api repos/actions/runner/releases/latest --jq .tag_name | sed 's/^v//')
-echo "runner $version, srt $SRT"
+echo "runner $version, srt $SRT, dir $DIR"
 curl -fsSL "https://github.com/actions/runner/releases/download/v$version/actions-runner-osx-arm64-$version.tar.gz" |
   tar -xz -C "$DIR/runner"
 
