@@ -1,0 +1,39 @@
+#!/bin/sh
+# Run one GitHub Actions job in a throwaway Linux VM: register a just-in-time
+# runner on a repo, start GitHub's runner image under Apple's container tool,
+# and exit when the job does. A supervisor (launchd KeepAlive) restarts it, so
+# one runner is always waiting.
+#
+# Configured from the environment:
+#   ACTIONS_SANDBOX_REPO    owner/repo the runner registers on (required)
+#   ACTIONS_SANDBOX_LABELS  comma-separated labels beside self-hosted
+#                           (default: actions-sandbox)
+#   ACTIONS_SANDBOX_MOUNTS  newline-separated `container run --volume` specs,
+#                           the only host paths the job can see
+set -eu
+
+repo=${ACTIONS_SANDBOX_REPO:?set ACTIONS_SANDBOX_REPO to owner/repo}
+name=actions-sandbox-$(date +%s)
+
+container system status >/dev/null 2>&1 || container system start --enable-kernel-install
+
+version=$(gh api repos/actions/runner/releases/latest --jq .tag_name | sed 's/^v//')
+
+set --
+for label in self-hosted $(echo "${ACTIONS_SANDBOX_LABELS:-actions-sandbox}" | tr ',' ' '); do
+  set -- "$@" -f "labels[]=$label"
+done
+jit=$(gh api -X POST "repos/$repo/actions/runners/generate-jitconfig" \
+  -f name="$name" -F runner_group_id=1 -f work_folder=_work "$@" --jq .encoded_jit_config)
+
+set --
+ifs=$IFS
+IFS='
+'
+for mount in ${ACTIONS_SANDBOX_MOUNTS:-}; do
+  set -- "$@" --volume "$mount"
+done
+IFS=$ifs
+
+echo "$(date -u +%FT%TZ) $name: runner $version on $repo"
+exec container run --rm --name "$name" "$@" "ghcr.io/actions/actions-runner:$version" ./run.sh --jitconfig "$jit"
