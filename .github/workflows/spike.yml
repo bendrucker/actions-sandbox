@@ -18,7 +18,5 @@ jobs:
       - name: Denied
         run: |
           set -x
-          ls ~ || echo "read home: denied"
-          head -c 1 ~/.ssh/config || echo "read ~/.ssh: denied"
-          touch ~/actions-sandbox-probe || echo "write home: denied"
-          curl -sS -m 10 -o /dev/null https://example.com || echo "egress example.com: denied"
+          ls /Users || echo "read host home: denied"
+          ls /Volumes || echo "read host volumes: denied"
