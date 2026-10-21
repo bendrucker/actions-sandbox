@@ -15,5 +15,6 @@
       "*.blob.core.windows.net"
     ],
     "deniedDomains": []
-  }
+  },
+  "enableWeakerNetworkIsolation": true
 }
