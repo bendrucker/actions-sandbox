@@ -1,34 +1,30 @@
 #!/bin/sh
-# One-job spike: register a just-in-time runner on this repo, start it under
-# srt, dispatch spike.yml, and print the run's log. All output goes to the log
-# file only, so the terminal stays quiet until it exits.
+# One-job spike: register a just-in-time runner on this repo, start GitHub's
+# runner image in a throwaway Linux VM with Apple's container tool, dispatch
+# spike.yml, and print the run's log. All output goes to the log file only, so
+# the terminal stays quiet until it exits.
 set -eu
 
 REPO=bendrucker/actions-sandbox
-SRT=@anthropic-ai/sandbox-runtime@0.0.81
 LOG=$HOME/tmp/actions-sandbox-spike.log
-here=$(cd "$(dirname "$0")" && pwd)
 
-# The runner exits unless it can list every ancestor of its root, and the
-# policy denies reads under ~, so the work dir lives outside it.
-DIR=$(cd "$(mktemp -d "${TMPDIR:-/tmp}/actions-sandbox-spike.XXXXXX")" && pwd -P)
-mkdir -p "$DIR/runner" "$(dirname "$LOG")"
+mkdir -p "$(dirname "$LOG")"
 exec > "$LOG" 2>&1
 
-version=$(gh api repos/actions/runner/releases/latest --jq .tag_name | sed 's/^v//')
-echo "runner $version, srt $SRT, dir $DIR"
-curl -fsSL "https://github.com/actions/runner/releases/download/v$version/actions-runner-osx-arm64-$version.tar.gz" |
-  tar -xz -C "$DIR/runner"
+command -v container >/dev/null || { echo "container is not installed: brew install container"; exit 1; }
+container system status >/dev/null 2>&1 || container system start --enable-kernel-install
 
-sed "s|@DIR@|$DIR|g" "$here/policy.json" > "$DIR/policy.json"
+version=$(gh api repos/actions/runner/releases/latest --jq .tag_name | sed 's/^v//')
+image=ghcr.io/actions/actions-runner:$version
+name=spike-$(date +%s)
+echo "image $image, runner $name"
 
 jit=$(gh api -X POST "repos/$REPO/actions/runners/generate-jitconfig" \
-  -f name="spike-$(date +%s)" -F runner_group_id=1 -f work_folder=_work \
+  -f name="$name" -F runner_group_id=1 -f work_folder=_work \
   -f 'labels[]=self-hosted' -f 'labels[]=actions-sandbox' --jq .encoded_jit_config)
 
-npx -y "$SRT" --settings "$DIR/policy.json" -c "cd '$DIR/runner' && ./run.sh --jitconfig $jit" &
+container run --rm --name "$name" "$image" ./run.sh --jitconfig "$jit" &
 runner=$!
-
 sleep 15
 gh workflow run spike.yml -R "$REPO"
 wait "$runner" || echo "runner exit=$?"
