@@ -10,6 +10,9 @@
 #                           (default: actions-sandbox)
 #   ACTIONS_SANDBOX_MOUNTS  newline-separated `container run --volume` specs,
 #                           the only host paths the job can see
+#   ACTIONS_SANDBOX_CPUS    VM CPUs (default: 8)
+#   ACTIONS_SANDBOX_MEMORY  VM memory (default: 16G). container's own default
+#                           of 1G is too small for most jobs
 set -eu
 
 repo=${ACTIONS_SANDBOX_REPO:?set ACTIONS_SANDBOX_REPO to owner/repo}
@@ -36,4 +39,6 @@ done
 IFS=$ifs
 
 echo "$(date -u +%FT%TZ) $name: runner $version on $repo"
-exec container run --rm --name "$name" "$@" "ghcr.io/actions/actions-runner:$version" ./run.sh --jitconfig "$jit"
+exec container run --rm --name "$name" \
+  --cpus "${ACTIONS_SANDBOX_CPUS:-8}" --memory "${ACTIONS_SANDBOX_MEMORY:-16G}" "$@" \
+  "ghcr.io/actions/actions-runner:$version" ./run.sh --jitconfig "$jit"
