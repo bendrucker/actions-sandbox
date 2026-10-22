@@ -38,7 +38,8 @@ for mount in ${ACTIONS_SANDBOX_MOUNTS:-}; do
 done
 IFS=$ifs
 
-echo "$(date -u +%FT%TZ) $name: runner $version on $repo"
+echo "$(date -u +%FT%TZ) $name: runner $version on $repo, mounts: ${ACTIONS_SANDBOX_MOUNTS:-none}" | tr '\n' ' '
+echo
 exec container run --rm --name "$name" \
   --cpus "${ACTIONS_SANDBOX_CPUS:-8}" --memory "${ACTIONS_SANDBOX_MEMORY:-16G}" "$@" \
   "ghcr.io/actions/actions-runner:$version" ./run.sh --jitconfig "$jit"
