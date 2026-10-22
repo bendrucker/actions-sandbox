@@ -9,6 +9,8 @@ A self-hosted GitHub Actions runner that runs each job in a throwaway Linux VM o
 | `ACTIONS_SANDBOX_REPO` | `owner/repo` the runner registers on (required) |
 | `ACTIONS_SANDBOX_LABELS` | Comma-separated labels beside `self-hosted` (default `actions-sandbox`) |
 | `ACTIONS_SANDBOX_MOUNTS` | Newline-separated `container run --volume` specs, the only host paths a job sees |
+| `ACTIONS_SANDBOX_CPUS` | VM CPUs (default `8`) |
+| `ACTIONS_SANDBOX_MEMORY` | VM memory (default `16G`; `container`'s own 1G default starves most jobs) |
 
 It needs macOS 26 or later, Apple's `container` (`brew install container`), and an authenticated `gh` that can register runners on the repo. Jobs get full network access.
 
